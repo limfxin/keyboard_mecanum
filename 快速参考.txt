@@ -1,0 +1,156 @@
+=====================================
+麦轮小车键控系统 - 快速参考卡
+=====================================
+
+【启动命令】
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+仅键控:
+  ros2 launch keyboard_mecanum keyboard_control_launch.py
+
+仅二维码:
+  ros2 launch keyboard_mecanum qr_scanner_launch.py
+
+完整系统:
+  ros2 launch keyboard_mecanum full_system_launch.py
+
+
+【按键布局】
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+移动:              舵机S1:
+   u    i    o        1  2  3
+   j    k    l      (左)(中)(右)
+   m    ,    .
+
+横移:
+      a   d
+
+
+【按键说明】
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+移动:
+  i  = 前进          ,  = 后退
+  j  = 左转          l  = 右转
+  u  = 左前          o  = 右前
+  m  = 左后          .  = 右后
+  a  = 左横移        d  = 右横移
+
+舵机:
+  1  = S1左转(-45°)
+  2  = S1中位(0°)
+  3  = S1右转(45°)
+
+速度:
+  q/z = 总速度 ±10%
+  w/x = 线速度 ±10%
+  e/c = 角速度 ±10%
+
+停止:
+  空格 或 k = 停止
+  Ctrl+C = 退出
+
+
+【重要特性】
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✓ 长按移动，松开停止（非持续模式）
+✓ 支持麦轮真正横移
+✓ 集成舵机控制
+✓ 自动二维码识别
+
+
+【ROS2话题】
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+/cmd_vel    - 小车速度控制
+/servo_s1   - 舵机S1角度
+/qr_code    - 二维码识别结果
+
+
+【常用命令】
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+查看话题:
+  ros2 topic list
+
+监控速度:
+  ros2 topic echo /cmd_vel
+
+监控二维码:
+  ros2 topic echo /qr_code
+
+手动控制舵机:
+  ros2 topic pub --once /servo_s1 std_msgs/msg/Int32 "{data: 0}"
+
+手动控制小车:
+  ros2 topic pub --once /cmd_vel geometry_msgs/msg/Twist \
+    "{linear: {x: 0.3, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.0}}"
+
+
+【故障排查】
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. 键控无反应
+   → 必须在Linux终端运行
+   → 检查xterm窗口是否激活
+
+2. 相机启动失败
+   → 运行: libcamera-hello -t 5000
+   → 检查相机是否启用: sudo raspi-config
+
+3. 舵机不转
+   → 检查ESP32连接
+   → 查看话题: ros2 topic list
+
+4. 横移无效
+   → 检查ESP32固件是否支持linear.y
+
+
+【安装】
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+自动安装:
+  cd keyboard_control
+  chmod +x install.sh
+  ./install.sh
+
+手动安装:
+  cd ~/ros2_ws/src
+  cp -r keyboard_control ./
+  cd ~/ros2_ws
+  colcon build --packages-select keyboard_mecanum
+  source install/setup.bash
+
+
+【测试】
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+交互式测试:
+  cd keyboard_control
+  chmod +x test_system.sh
+  ./test_system.sh
+
+
+【文档】
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+README.md       - 详细技术文档
+使用指南.md      - 快速使用指南
+项目说明.md      - 项目结构说明
+ROS2_JAZZY说明.md - Jazzy版本特别说明
+快速参考.txt     - 本文件
+
+
+【系统架构】
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+树莓派
+├── keyboard_control_node (键控)
+│   ├── 发布 /cmd_vel → ESP32
+│   └── 发布 /servo_s1 → ESP32
+│
+└── qr_scanner_node (二维码)
+    └── 发布 /qr_code
+
+ESP32 (odom_publisher)
+├── 订阅 /cmd_vel (控制电机)
+├── 订阅 /servo_s1 (控制舵机)
+└── 发布 /odom_raw (里程计)
+
+
+=====================================
+版本: v1.0.0 | 日期: 2024-11-22
+测试平台: 树莓派4B + ROS2 (Jazzy/Humble)
+=====================================
+
