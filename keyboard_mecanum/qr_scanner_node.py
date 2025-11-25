@@ -27,11 +27,13 @@ class QRScannerNode(Node):
         self.declare_parameter('camera_width', 640)
         self.declare_parameter('camera_height', 480)
         self.declare_parameter('publish_rate', 10.0)  # Hz
+        self.declare_parameter('debug_mode', False)  # 调试模式 - 显示图像窗口
         
         # 获取参数
         self.camera_width = self.get_parameter('camera_width').value
         self.camera_height = self.get_parameter('camera_height').value
         self.publish_rate = self.get_parameter('publish_rate').value
+        self.debug_mode = self.get_parameter('debug_mode').value
         
         # 命名管道路径
         self.fifo_path = "/tmp/rpicam_fifo"
@@ -47,6 +49,11 @@ class QRScannerNode(Node):
         self.timer = self.create_timer(timer_period, self.timer_callback)
         
         self.get_logger().info('二维码识别节点已启动')
+        
+        if self.debug_mode:
+            self.get_logger().info('⚙️ 调试模式已启用 - 将显示图像窗口（需要图形界面）')
+        else:
+            self.get_logger().info('📡 正常模式 - 后台运行，适合SSH环境')
         
         # 初始化相机
         self.init_camera()
@@ -115,8 +122,34 @@ class QRScannerNode(Node):
         if not ret:
             return
         
-        # 检测二维码
+        # 图像预处理增强二维码识别
+        # 1. 转灰度图
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        
+        # 2. 直方图均衡化 - 增强对比度
+        enhanced = cv2.equalizeHist(gray)
+        
+        # 3. 高斯模糊去噪
+        blurred = cv2.GaussianBlur(enhanced, (5, 5), 0)
+        
+        # 4. 自适应阈值处理 - 适应不同光照
+        thresh = cv2.adaptiveThreshold(
+            blurred, 255, 
+            cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
+            cv2.THRESH_BINARY, 11, 2
+        )
+        
+        # 尝试多种预处理结果检测
+        # 先用原始彩色图检测
         data, bbox, _ = self.detector.detectAndDecode(frame)
+        
+        # 如果失败，尝试增强后的灰度图
+        if not data:
+            data, bbox, _ = self.detector.detectAndDecode(enhanced)
+        
+        # 如果还是失败，尝试阈值处理后的图
+        if not data:
+            data, bbox, _ = self.detector.detectAndDecode(thresh)
         
         # 如果检测到二维码且内容与上次不同
         if bbox is not None and data and data != self.last_qr_data:
@@ -129,6 +162,17 @@ class QRScannerNode(Node):
             
             # 打印到控制台
             self.get_logger().info(f'✅ 检测到二维码: {data}')
+        
+        # 调试模式 - 显示图像窗口（仅在有图形界面时）
+        if self.debug_mode:
+            try:
+                cv2.imshow('QR Scanner - Original', frame)
+                cv2.imshow('QR Scanner - Enhanced', enhanced)
+                cv2.imshow('QR Scanner - Threshold', thresh)
+                cv2.waitKey(1)
+            except cv2.error:
+                # SSH环境下无法显示窗口，忽略错误
+                pass
     
     def cleanup(self):
         """清理资源"""

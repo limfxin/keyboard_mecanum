@@ -20,7 +20,7 @@ def generate_launch_description():
                 'linear_speed_limit': 1.0,
                 'angular_speed_limit': 5.0,
             }],
-            prefix='xterm -e',  # 在新终端中运行
+            # prefix='xterm -e',  # SSH环境下不需要，直接在当前终端运行
         ),
         
         # 二维码识别节点
