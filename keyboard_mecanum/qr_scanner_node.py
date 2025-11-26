@@ -129,15 +129,8 @@ class QRScannerNode(Node):
         # 2. 直方图均衡化 - 增强对比度
         enhanced = cv2.equalizeHist(gray)
         
-        # 3. 高斯模糊去噪
+        # 3. 高斯模糊去噪（可选，用于显示效果）
         blurred = cv2.GaussianBlur(enhanced, (5, 5), 0)
-        
-        # 4. 自适应阈值处理 - 适应不同光照
-        thresh = cv2.adaptiveThreshold(
-            blurred, 255, 
-            cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
-            cv2.THRESH_BINARY, 11, 2
-        )
         
         # 尝试多种预处理结果检测
         # 先用原始彩色图检测
@@ -146,10 +139,6 @@ class QRScannerNode(Node):
         # 如果失败，尝试增强后的灰度图
         if not data:
             data, bbox, _ = self.detector.detectAndDecode(enhanced)
-        
-        # 如果还是失败，尝试阈值处理后的图
-        if not data:
-            data, bbox, _ = self.detector.detectAndDecode(thresh)
         
         # 如果检测到二维码且内容与上次不同
         if bbox is not None and data and data != self.last_qr_data:
@@ -168,7 +157,6 @@ class QRScannerNode(Node):
             try:
                 cv2.imshow('QR Scanner - Original', frame)
                 cv2.imshow('QR Scanner - Enhanced', enhanced)
-                cv2.imshow('QR Scanner - Threshold', thresh)
                 cv2.waitKey(1)
             except cv2.error:
                 # SSH环境下无法显示窗口，忽略错误
