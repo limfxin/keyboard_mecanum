@@ -160,10 +160,8 @@ try:
         
         # 尝试显示窗口（如果失败会继续运行但不显示）
         try:
-            # 显示原始图像和预处理图像对比
-            cv2.imshow('QR Scanner - Original', frame)
-            cv2.imshow('QR Scanner - Enhanced', enhanced)
-            cv2.imshow('QR Scanner - Threshold', thresh)
+            # 只显示原始彩色图像
+            cv2.imshow('QR Scanner', frame)
             
             key = cv2.waitKey(1) & 0xFF
             if key == ord('q'):
