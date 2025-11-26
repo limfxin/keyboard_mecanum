@@ -133,12 +133,21 @@ class QRScannerNode(Node):
         blurred = cv2.GaussianBlur(enhanced, (5, 5), 0)
         
         # 尝试多种预处理结果检测
+        data = ""
+        bbox = None
+        
         # 先用原始彩色图检测
-        data, bbox, _ = self.detector.detectAndDecode(frame)
+        try:
+            data, bbox, _ = self.detector.detectAndDecode(frame)
+        except cv2.error:
+            pass  # 忽略OpenCV内部错误
         
         # 如果失败，尝试增强后的灰度图
         if not data:
-            data, bbox, _ = self.detector.detectAndDecode(enhanced)
+            try:
+                data, bbox, _ = self.detector.detectAndDecode(enhanced)
+            except cv2.error:
+                pass  # 忽略OpenCV内部错误
         
         # 如果检测到二维码且内容与上次不同
         if bbox is not None and data and data != self.last_qr_data:
